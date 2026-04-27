@@ -1,0 +1,95 @@
+services:
+  vllm-qwen:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:nightly}
+    container_name: balu-vllm-qwen35
+    restart: unless-stopped
+    ipc: host
+    gpus: all
+    environment:
+      HF_HOME: /root/.cache/huggingface
+      NVIDIA_VISIBLE_DEVICES: all
+    volumes:
+      - ../models:/models:ro
+      - hf-cache:/root/.cache/huggingface
+    command: >
+      --model ${VLLM_MODEL_PATH:-/models/Qwen3.5-0.8B}
+      --served-model-name ${PUBLIC_MODEL_NAME:-qwen3.5-0.8b}
+      --host 0.0.0.0
+      --port 8000
+      --dtype ${VLLM_DTYPE:-half}
+      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.30}
+      --max-model-len ${MAX_MODEL_LEN:-2048}
+      --max-num-seqs ${MAX_NUM_SEQS:-16}
+      --enable-prefix-caching
+      --trust-remote-code
+      --language-model-only
+      --disable-log-requests
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python3 - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8000/v1/models', timeout=5).read()\nPY"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: balu-ollama-fallback
+    restart: unless-stopped
+    profiles: ["fallback"]
+    volumes:
+      - ollama-data:/root/.ollama
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: balu-fastapi-wrapper
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      VLLM_BASE_URL: http://vllm-qwen:8000/v1
+      FALLBACK_BASE_URL: http://ollama:11434/v1
+    depends_on:
+      vllm-qwen:
+        condition: service_started
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nurllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5).read()\nPY"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: balu-nginx
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "80:80"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  hf-cache:
+  ollama-data:

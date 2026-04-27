@@ -1,0 +1,112 @@
+# slm-hosting-balu-challenge1-weaction
+
+Production-style self-hosted SLM project for the WeAction Challenge 1 assignment.
+
+This repository hosts a small Qwen 3.5 model behind a FastAPI wrapper, with Docker Compose, Nginx reverse proxy, basic API-key auth, request quota controls, structured JSON logs, deep health checks, and an Ollama CPU fallback path.
+
+## Why this project exists
+
+AI engineers often need to deploy their own fine-tuned or open-source models instead of calling a hosted API. This repo demonstrates the core production pattern:
+
+```text
+Client
+  ↓ HTTPS / HTTP
+Nginx reverse proxy
+  ↓ rate-limited internal traffic
+FastAPI wrapper
+  ↓ validation, auth, quota, logging, timeout, fallback
+vLLM OpenAI-compatible server  ── fallback ── Ollama OpenAI-compatible server
+  ↓
+Qwen 3.5 SLM
+```
+
+## Model choice
+
+Default GPU model:
+
+```text
+Qwen/Qwen3.5-0.8B
+```
+
+Reason: it is small enough for portfolio/demo deployment, officially published by Qwen, compatible with vLLM, and suitable for prototyping or task-specific development. The original challenge suggested Qwen 2.5 1.5B AWQ, but this repo intentionally uses a current Qwen 3.5 small model while preserving the same production-serving architecture.
+
+CPU fallback model:
+
+```text
+qwen3.5:0.8b
+```
+
+served by Ollama.
+
+For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to another Qwen 3.5 variant.
+
+## Features
+
+- FastAPI wrapper around OpenAI-compatible `/v1/chat/completions`
+- vLLM primary provider
+- Ollama CPU fallback provider
+- Nginx reverse proxy with rate limiting
+- Optional API-key authentication
+- Lightweight in-memory per-key quota
+- JSON logs with latency, provider, status, and request IDs
+- Deep health checks for primary and fallback providers
+- Docker Compose files for GPU and CPU-only demo modes
+- Runbook, architecture decision record, changelog, and avoidance table
+
+## Repository layout
+
+```text
+slm-hosting-balu-challenge1-weaction/
+├── app/                         # FastAPI wrapper
+├── docker/                      # Dockerfile and Compose files
+├── nginx/                       # Nginx reverse-proxy config
+├── scripts/                     # setup, smoke test, rate-limit proof helpers
+├── docs/                        # runbook, ADR, changelog, screenshots checklist
+├── tests/                       # lightweight unit tests
+├── AVOIDANCE_TABLE.md           # proof of avoided production mistakes
+├── requirements.txt
+├── .env.example
+└── README.md
+```
+
+## Getting started
+
+See [docs/RUNBOOK.md](docs/RUNBOOK.md) for detailed setup and operational guides:
+
+- **GPU path**: Start vLLM with Docker Compose
+- **CPU-only path**: Start Ollama fallback for demos without a GPU
+- **Health checks**: Verify services are running
+- **Testing**: Run smoke tests and rate-limit proofs
+
+## API endpoints
+
+| Method | Endpoint               | Purpose                                     |
+| ------ | ---------------------- | ------------------------------------------- |
+| `GET`  | `/health`              | Shallow app health                          |
+| `GET`  | `/v1/health`           | Deep provider health                        |
+| `GET`  | `/v1/models`           | Proxy model list from active provider       |
+| `POST` | `/v1/chat/completions` | Validated OpenAI-compatible chat completion |
+
+## Authentication and quota
+
+Authentication is enabled when `API_KEYS` is non-empty.
+
+Accepted auth formats:
+
+```bash
+X-API-Key: dev-balu-key
+Authorization: Bearer dev-balu-key
+```
+
+Quota is intentionally simple and in-memory for a portfolio project. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
+
+## Portfolio talking points
+
+Use these points in your 5-minute video:
+
+- The project separates model inference from business/API responsibilities.
+- vLLM provides high-throughput inference and an OpenAI-compatible API.
+- FastAPI adds validation, auth, quota, logging, timeouts, and fallback.
+- Nginx protects the app with edge rate limiting and reverse proxying.
+- The model is downloaded once and mounted into the container for reproducibility.
+- CPU fallback makes the demo possible without a GPU.
