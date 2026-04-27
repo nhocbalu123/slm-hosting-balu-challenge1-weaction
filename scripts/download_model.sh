@@ -1,4 +1,3 @@
-\
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -25,7 +24,7 @@ if [[ -z "${PYTHON_CMD}" ]]; then
   echo "Install Python 3.10+ from https://www.python.org/downloads/"
   echo "During installation, enable: Add python.exe to PATH"
   echo ""
-  echo "Then reopen PowerShell/Git Bash and verify:"
+  echo "Then reopen Git Bash and verify:"
   echo "  python --version"
   echo "or:"
   echo "  py -3 --version"

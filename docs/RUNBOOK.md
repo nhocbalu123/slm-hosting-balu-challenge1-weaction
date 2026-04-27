@@ -210,13 +210,13 @@ pytest -q
 
 ### Windows note
 
-On Windows PowerShell, you can download the model with:
+On Windows, run these commands in Git Bash:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/download_model.ps1
+```bash
+bash scripts/download_model.sh
 ```
 
-If `python` is not found, install Python 3.10+ and enable **Add python.exe to PATH**, then reopen your terminal.
+If `python` is not found, install Python 3.10+ and enable **Add python.exe to PATH**, then reopen Git Bash.
 
 ## Screenshot checklist
 

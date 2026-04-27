@@ -77,6 +77,7 @@ See [docs/RUNBOOK.md](docs/RUNBOOK.md) for detailed setup and operational guides
 - **CPU-only path**: Start Ollama fallback for demos without a GPU
 - **Health checks**: Verify services are running
 - **Testing**: Run smoke tests and rate-limit proofs
+- **Windows**: Use Git Bash for the shell commands in the runbook (including `bash scripts/download_model.sh`)
 
 ## API endpoints
 
