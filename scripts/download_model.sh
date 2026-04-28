@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MODEL_NAME="${MODEL_NAME:-Qwen/Qwen3.5-0.8B}"
-MODEL_DIR="${MODEL_DIR:-./models/qwen3.5-0.8b}"
+MODEL_DIR="${MODEL_DIR:-./models/Qwen3.5-0.8B}"
 
 find_python() {
   if command -v python >/dev/null 2>&1; then
