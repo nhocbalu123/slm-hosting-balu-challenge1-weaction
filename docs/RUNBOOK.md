@@ -36,13 +36,19 @@ bash scripts/pull_ollama_model_cpu.sh
 
 ## Health checks
 
-Shallow API health:
+Shallow API health (no auth required):
 
 ```bash
 curl http://localhost/health
 ```
 
-Deep provider health:
+Deep provider health (requires API key when `API_KEYS` is set):
+
+```bash
+curl -H 'X-API-Key: dev-balu-key' http://localhost/v1/health | jq
+```
+
+If `API_KEYS` is empty (auth disabled), omit the header:
 
 ```bash
 curl http://localhost/v1/health | jq
@@ -110,7 +116,7 @@ docker compose -f docker/docker-compose.yml --profile fallback up -d
 2. Call health to confirm vLLM is serving:
 
 ```bash
-curl http://localhost/v1/health | jq
+curl -H 'X-API-Key: dev-balu-key' http://localhost/v1/health | jq
 ```
 
 Expected `primary.healthy: true`.
@@ -124,10 +130,10 @@ docker compose -f docker/docker-compose.yml stop vllm-qwen
 4. Wait a few seconds for health check to detect the outage, then call health:
 
 ```bash
-curl http://localhost/v1/health | jq
+curl -H 'X-API-Key: dev-balu-key' http://localhost/v1/health | jq
 ```
 
-4. Call chat completion and check response header:
+5. Call chat completion and check response header:
 
 ```bash
 curl -i http://localhost/v1/chat/completions \
@@ -289,19 +295,41 @@ docker compose -f docker/docker-compose.yml up -d
 
 ## Development
 
-Run the API locally against any OpenAI-compatible backend:
+> **Normal operation uses Docker Compose** (see the start sections above). The commands below are only for iterating on the FastAPI wrapper code itself — for example, to get hot-reload when editing `app/` files, or to run the test suite without starting any containers.
+
+### Run the FastAPI layer locally (no Docker)
+
+Use this when you are changing Python code in `app/` and want fast feedback without rebuilding the Docker image. You still need a running OpenAI-compatible backend (vLLM or Ollama) for real requests; point the wrapper at it via `.env`.
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate       # on Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env            # set VLLM_BASE_URL / FALLBACK_BASE_URL to your backend
 uvicorn app.main:app --reload --port 8080
 ```
 
-Run tests:
+The wrapper is now at `http://localhost:8080`. Nginx and provider containers are not started; any providers listed in `.env` must already be running separately.
+
+### Run tests
+
+The test suite mocks all provider network calls to verify the wrapper's own logic in isolation — no running containers or providers are needed:
 
 ```bash
 pytest -q
+```
+
+`pytest.ini` sets `asyncio_mode = auto` so async tests run without per-function decorators. Coverage includes:
+
+- **Schema validation** — Pydantic catches invalid request shapes
+- **Gateway fallback logic** — primary success, primary failure → Ollama fallback, both providers down
+- **HTTP layer** — stream rejection, response headers, error code mapping
+
+These unit tests are fast and reliable. For **integration testing** (verifying the full stack end-to-end against real providers), use the smoke test scripts documented in the sections above:
+
+```bash
+bash scripts/smoke_test.sh
+bash scripts/load_test_rate_limit.sh
 ```
 
 ### Windows note
@@ -316,16 +344,9 @@ If `python` is not found, install Python 3.10+ and enable **Add python.exe to PA
 
 ## Screenshot checklist
 
-Save evidence into `docs/screenshots/`:
+Save evidence into `docs/screenshots/`. The required filenames and examples are listed in [`docs/screenshots/README.md`](screenshots/README.md).
 
-1. `1-chat-success.png` — successful `POST /v1/chat/completions`
-2. `2-health-ok.png` — `GET /v1/health` when the provider is up
-3. `3-health-fail.png` — `GET /v1/health` after stopping vLLM, showing fallback/degraded state
-4. `4-rate-limit.png` — Nginx returns 429 under spam load
-5. `5-json-log.png` — container logs with JSON fields
-6. `6-compose-healthy.png` — `docker compose ps` showing healthy/running containers
-
-Helper commands:
+Useful helper commands:
 
 ```bash
 bash scripts/smoke_test.sh

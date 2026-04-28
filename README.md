@@ -46,24 +46,27 @@ For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to
 - vLLM primary provider
 - Ollama CPU fallback provider
 - Nginx reverse proxy with rate limiting
-- Optional API-key authentication
+- Optional API-key authentication (`/v1/health`, `/v1/models`, and `/v1/chat/completions`)
 - Lightweight in-memory per-key quota
 - JSON logs with latency, provider, status, and request IDs
 - Deep health checks for primary and fallback providers
 - Docker Compose files for GPU and CPU-only demo modes
-- Runbook, architecture decision record, changelog, and avoidance table
+- GitHub Actions CI running the full test suite on every push
+- Runbook, architecture decision record, changelog, avoidance table, and evaluation doc
 
 ## Repository layout
 
 ```text
 slm-hosting-balu-challenge1-weaction/
+├── .github/workflows/           # CI (pytest on push/PR)
 ├── app/                         # FastAPI wrapper
 ├── docker/                      # Dockerfile and Compose files
+├── docs/                        # runbook, ADR, changelog, evaluation, screenshots checklist
 ├── nginx/                       # Nginx reverse-proxy config
 ├── scripts/                     # setup, smoke test, rate-limit proof helpers
-├── docs/                        # runbook, ADR, changelog, screenshots checklist
-├── tests/                       # lightweight unit tests
-├── AVOIDANCE_TABLE.md           # proof of avoided production mistakes
+├── tests/                       # unit and HTTP-layer tests
+├── docs/AVOIDANCE_TABLE.md      # proof of avoided production mistakes
+├── pytest.ini                   # asyncio_mode = auto for pytest-asyncio
 ├── requirements.txt
 ├── .env.example
 └── README.md
@@ -93,12 +96,14 @@ docker compose -f docker/docker-compose.yml exec -e BASE_URL=http://localhost:80
 
 ## API endpoints
 
-| Method | Endpoint               | Purpose                                     |
-| ------ | ---------------------- | ------------------------------------------- |
-| `GET`  | `/health`              | Shallow app health                          |
-| `GET`  | `/v1/health`           | Deep provider health                        |
-| `GET`  | `/v1/models`           | Proxy model list from active provider       |
-| `POST` | `/v1/chat/completions` | Validated OpenAI-compatible chat completion |
+| Method | Endpoint               | Auth required | Purpose                                     |
+| ------ | ---------------------- | ------------- | ------------------------------------------- |
+| `GET`  | `/health`              | No            | Shallow app health                          |
+| `GET`  | `/v1/health`           | Yes           | Deep provider health (includes internal URLs) |
+| `GET`  | `/v1/models`           | Yes           | Proxy model list from active provider       |
+| `POST` | `/v1/chat/completions` | Yes           | Validated OpenAI-compatible chat completion |
+
+Auth is enforced when `API_KEYS` is non-empty. When `API_KEYS` is empty, all endpoints are accessible without a key.
 
 ## Authentication and quota
 
@@ -123,3 +128,21 @@ Use these points in your 5-minute video:
 - Nginx protects the app with edge rate limiting and reverse proxying.
 - The model is downloaded once and mounted into the container for reproducibility.
 - CPU fallback makes the demo possible without a GPU.
+
+---
+
+## Engineering decisions & lessons learned
+
+Key choices worth calling out:
+
+- `asyncio_mode = auto` keeps async tests running without per-test decorators.
+- `/v1/health` requires auth because it exposes provider details; root `/health` stays public and shallow.
+- Tests override FastAPI dependencies instead of patching app state directly.
+- vLLM and Ollama are modelled as primary/fallback providers, not load-balanced peers.
+
+### 0.8B SLM quality vs. latency trade-off
+
+The 0.8B model is fast enough for interactive demos, but quality drops on multi-step reasoning, long-context tasks, and complex instruction following. The gateway is model-agnostic, so moving to a larger model is mostly an environment-variable change.
+
+See [`docs/EVALUATION.md`](docs/EVALUATION.md) for sample prompts, measured latencies, and a detailed limitations table.
+

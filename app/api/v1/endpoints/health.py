@@ -8,7 +8,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health", response_model=HealthResponse)
-async def deep_health(gateway: GatewayDep) -> dict:
+async def deep_health(gateway: GatewayDep, _subject: AuthSubjectDep) -> dict:
     return await gateway.health()
 
 

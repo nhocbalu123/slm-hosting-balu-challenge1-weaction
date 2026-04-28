@@ -22,7 +22,8 @@ echo "== Shallow health =="
 curl -s "$BASE_URL/health" | pretty_json
 
 echo "== Deep health =="
-curl -s "$BASE_URL/v1/health" | pretty_json
+curl -s "$BASE_URL/v1/health" \
+  -H "X-API-Key: $API_KEY" | pretty_json
 
 echo "== Chat completion =="
 payload=$(cat <<EOF

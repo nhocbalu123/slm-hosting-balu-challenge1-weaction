@@ -44,7 +44,7 @@ Mention important config:
 - `max-model-len`
 - `gpu-memory-utilization`
 - model volume mount
-- defaults tuned for small GPUs: `MAX_MODEL_LEN=1024`, `MAX_NUM_SEQS=4`, `GPU_MEMORY_UTILIZATION=0.70`
+- GPU tuning knobs: `MAX_MODEL_LEN`, `MAX_NUM_SEQS`, and `GPU_MEMORY_UTILIZATION` (show the values from your `.env`)
 
 ## 3:20-4:20 — Product demo
 
@@ -68,7 +68,7 @@ Show:
 - JSON logs
 - rate limit test
 - degraded/fallback health state
-- `AVOIDANCE_TABLE.md`
+- `docs/AVOIDANCE_TABLE.md`
 - `docs/RUNBOOK.md`
 
 Close by explaining that a real production version would use Redis quota, TLS certificates, metrics, tracing, and Kubernetes autoscaling.
