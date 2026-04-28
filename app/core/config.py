@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -8,13 +8,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings loaded from environment variables or .env."""
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(extra="ignore")
 
     app_name: str = "slm-hosting-balu-challenge1-weaction"
     environment: str = "local"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
-    api_keys: list[str] = Field(default_factory=list)
+    api_keys: Any = Field(default="")  # Accept any type, validator handles conversion
     requests_per_minute: int = Field(default=60, ge=1)
 
     vllm_base_url: str = "http://vllm-qwen:8000/v1"
@@ -30,12 +30,15 @@ class Settings(BaseSettings):
 
     @field_validator("api_keys", mode="before")
     @classmethod
-    def split_api_keys(cls, value: str | list[str] | None) -> list[str]:
+    def parse_api_keys(cls, value: Any) -> list[str]:
+        """Parse api_keys from string or list."""
         if value is None or value == "":
             return []
         if isinstance(value, list):
             return value
-        return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return []
 
     @field_validator("vllm_base_url", "fallback_base_url")
     @classmethod

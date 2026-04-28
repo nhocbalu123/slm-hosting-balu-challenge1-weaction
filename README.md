@@ -79,6 +79,18 @@ See [docs/RUNBOOK.md](docs/RUNBOOK.md) for detailed setup and operational guides
 - **Testing**: Run smoke tests and rate-limit proofs
 - **Windows**: Use Git Bash for the shell commands in the runbook (including `bash scripts/download_model.sh`)
 
+Quick smoke test:
+
+```bash
+bash scripts/smoke_test.sh
+```
+
+If `jq` is missing, the script prints raw JSON. You can also run it inside the API container:
+
+```bash
+docker compose -f docker/docker-compose.yml exec -e BASE_URL=http://localhost:8080 api bash /app/scripts/smoke_test.sh
+```
+
 ## API endpoints
 
 | Method | Endpoint               | Purpose                                     |

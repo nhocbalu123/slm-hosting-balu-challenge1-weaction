@@ -44,6 +44,7 @@ Mention important config:
 - `max-model-len`
 - `gpu-memory-utilization`
 - model volume mount
+- defaults tuned for small GPUs: `MAX_MODEL_LEN=1024`, `MAX_NUM_SEQS=4`, `GPU_MEMORY_UTILIZATION=0.70`
 
 ## 3:20-4:20 — Product demo
 
@@ -58,6 +59,7 @@ Show:
 - health check
 - chat completion response
 - `X-LLM-Provider` header if using `curl -i`
+- note: if `jq` is missing, the script prints raw JSON or run it inside the API container
 
 ## 4:20-5:00 — Production-readiness proof
 

@@ -62,18 +62,32 @@ Expected states:
 bash scripts/smoke_test.sh
 ```
 
+If `jq` is not installed, the script prints raw JSON with a warning.
+
+Run inside the API container (uses bundled `jq`):
+
+```bash
+docker compose -f docker/docker-compose.yml exec -e BASE_URL=http://localhost:8080 api bash /app/scripts/smoke_test.sh
+```
+
 ## Logs
 
 FastAPI JSON logs:
 
 ```bash
-docker logs balu-fastapi-wrapper --tail=100
+docker compose -f docker/docker-compose.yml logs api --tail=100
 ```
 
 Nginx JSON access logs:
 
 ```bash
-docker logs balu-nginx --tail=100
+docker compose -f docker/docker-compose.yml logs nginx --tail=100
+```
+
+vLLM initialization logs:
+
+```bash
+docker compose -f docker/docker-compose.yml logs vllm-qwen --tail=100
 ```
 
 Important fields:
@@ -87,14 +101,27 @@ Important fields:
 
 ## Fallback test
 
-1. Start GPU stack with fallback profile.
-2. Stop vLLM:
+1. Start GPU stack with fallback profile:
 
 ```bash
-docker stop balu-vllm-qwen35
+docker compose -f docker/docker-compose.yml --profile fallback up -d
 ```
 
-3. Call health:
+2. Call health to confirm vLLM is serving:
+
+```bash
+curl http://localhost/v1/health | jq
+```
+
+Expected `primary.healthy: true`.
+
+3. Stop vLLM:
+
+```bash
+docker compose -f docker/docker-compose.yml stop vllm-qwen
+```
+
+4. Wait a few seconds for health check to detect the outage, then call health:
 
 ```bash
 curl http://localhost/v1/health | jq
@@ -136,6 +163,28 @@ docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
 
 If this fails, install or fix NVIDIA Container Toolkit.
 
+### NVIDIA requirement error: `unsatisfied condition: cuda>=13.0`
+
+If you use `vllm/vllm-openai:nightly`, the image may require CUDA 13.
+If your host driver supports CUDA 12.x (for example 12.9), pin a CUDA 12.9 image tag in `.env`:
+
+```env
+VLLM_IMAGE=vllm/vllm-openai:v0.20.0-cu129-ubuntu2404
+```
+
+Then recreate the GPU stack:
+
+```bash
+docker compose -f docker/docker-compose.yml down
+docker compose -f docker/docker-compose.yml up --build -d
+```
+
+If you do not need GPU serving, use CPU-only mode instead:
+
+```bash
+docker compose -f docker/docker-compose.cpu.yml up --build -d
+```
+
 ### Model path not found
 
 Check that `scripts/download_model.sh` created:
@@ -150,15 +199,23 @@ Check `.env`:
 VLLM_MODEL_PATH=/models/Qwen3.5-0.8B
 ```
 
-### vLLM out of memory
+### vLLM memory errors
 
-Lower these in `.env`:
+If you see a KV cache error like:
+
+```text
+KV cache is needed ... larger than the available KV cache memory
+```
+
+Increase GPU memory utilization and/or lower the model length:
 
 ```env
+GPU_MEMORY_UTILIZATION=0.70
 MAX_MODEL_LEN=1024
 MAX_NUM_SEQS=4
-GPU_MEMORY_UTILIZATION=0.20
 ```
+
+If you see CUDA OOM errors, lower `GPU_MEMORY_UTILIZATION` or `MAX_MODEL_LEN` instead.
 
 Or run CPU-only mode with Ollama.
 
@@ -179,6 +236,45 @@ API_KEYS=
 ### API returns 429
 
 The in-memory app quota or Nginx rate limiter is working. Lower traffic or increase `REQUESTS_PER_MINUTE` and the Nginx `limit_req_zone` rate.
+
+### API container exits or fails health checks with SettingsError
+
+If the API container shows this error in logs:
+
+```
+pydantic_settings.sources.SettingsError: error parsing value for field "api_keys" from source "EnvSettingsSource"
+```
+
+This occurs because Pydantic Settings tries to parse the `API_KEYS` environment variable before field validators run. The solution is to rebuild the Docker image without cache to pick up the fixed configuration:
+
+```bash
+docker compose -f docker/docker-compose.yml down
+docker image rm balu-weaction-gpu-api
+docker compose -f docker/docker-compose.yml build --no-cache api
+docker compose -f docker/docker-compose.yml up -d
+```
+
+The fix in `app/core/config.py` uses a `field_validator` with `mode="before"` and accepts the `api_keys` field as `Any` type to bypass Pydantic Settings' automatic JSON parsing.
+
+### Docker BuildKit caches old application code
+
+If you update Python code in `app/` but the Docker image still runs old code, Docker BuildKit may be caching the `COPY app ./app` layer. Force a rebuild without cache:
+
+```bash
+docker compose -f docker/docker-compose.yml build --no-cache api
+docker compose -f docker/docker-compose.yml up -d
+```
+
+### Container name already in use
+
+If you see "Conflict. The container name '/balu-vllm-qwen35' is already in use by container...", the old container name from a previous deployment is blocking the new one.
+
+Fix: Docker Compose now uses project-scoped container names (e.g., `balu-weaction-gpu-api-1` instead of fixed names). Remove the old containers:
+
+```bash
+docker compose -f docker/docker-compose.yml down --remove-orphans
+docker compose -f docker/docker-compose.yml up -d
+```
 
 ## Mistakes avoided from the challenge
 

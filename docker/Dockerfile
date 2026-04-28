@@ -6,12 +6,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends bash curl jq \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN addgroup --system app && adduser --system --ingroup app app
 
 COPY requirements.txt ./requirements.txt
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY app ./app
+COPY scripts ./scripts
 
 USER app
 EXPOSE 8080
