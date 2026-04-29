@@ -120,6 +120,10 @@ Authorization: Bearer dev-balu-key
 
 Quota is intentionally simple and in-memory for a portfolio project. Known limitations: it is per-process only (not distributed across replicas), counters are stored per API-key subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
 
+## Limitations / next steps
+
+This repository focuses on the core serving pattern rather than a full production platform. The next steps for a real deployment would be Redis-backed distributed quota, TLS certificate management, metrics, distributed tracing, Kubernetes deployment/autoscaling, and streaming response support.
+
 ## Portfolio talking points
 
 Use these points in your 5-minute video:

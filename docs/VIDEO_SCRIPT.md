@@ -71,4 +71,4 @@ Show:
 - `docs/AVOIDANCE_TABLE.md`
 - `docs/RUNBOOK.md`
 
-Close by explaining that a real production version would use Redis quota, TLS certificates, metrics, tracing, and Kubernetes autoscaling.
+Close by explaining that a real production version would use Redis quota, TLS certificates, metrics, tracing, Kubernetes autoscaling, and streaming response support.

@@ -6,7 +6,7 @@
 Stack under test (as described in [RUNBOOK.md](RUNBOOK.md)):
 - **Primary**: vLLM (GPU) serving `Qwen/Qwen3.5-0.8B`
 - **Fallback**: Ollama (CPU) serving `qwen3.5:0.8b`
-- API wrapper: FastAPI gateway at `http://localhost:8000`
+- API wrapper: FastAPI gateway through Nginx at `http://localhost` (or direct local FastAPI at `http://localhost:8080`)
 
 All timings should be measured as wall-clock from `POST /v1/chat/completions` to last byte (non-streaming), using `curl -w "%{time_total}"` or equivalent.
 
