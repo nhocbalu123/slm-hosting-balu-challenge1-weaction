@@ -19,6 +19,7 @@ class LLMGateway:
             base_url=settings.vllm_base_url,
             api_key=settings.vllm_api_key,
             timeout_seconds=settings.primary_timeout_seconds,
+            expected_model=settings.vllm_model,
         )
         self.fallback = (
             OpenAICompatibleClient(
@@ -26,6 +27,7 @@ class LLMGateway:
                 base_url=settings.fallback_base_url,
                 api_key=settings.fallback_api_key,
                 timeout_seconds=settings.fallback_timeout_seconds,
+                expected_model=settings.fallback_model,
             )
             if settings.enable_fallback
             else None

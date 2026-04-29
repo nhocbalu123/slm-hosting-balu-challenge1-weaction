@@ -42,7 +42,7 @@ For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to
 
 ## Features
 
-- FastAPI wrapper around OpenAI-compatible `/v1/chat/completions`
+- FastAPI wrapper around an OpenAI-compatible-subset `/v1/chat/completions`
 - vLLM primary provider
 - Ollama CPU fallback provider
 - Nginx reverse proxy with rate limiting
@@ -51,7 +51,7 @@ For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to
 - JSON logs with latency, provider, status, and request IDs
 - Deep health checks for primary and fallback providers
 - Docker Compose files for GPU and CPU-only demo modes
-- GitHub Actions CI running the full test suite on every push
+- GitHub Actions CI running the full test suite on pushes to `main` and `dev`, and on pull requests
 - Runbook, architecture decision record, changelog, avoidance table, and evaluation doc
 
 ## Repository layout
@@ -101,9 +101,11 @@ docker compose -f docker/docker-compose.yml exec -e BASE_URL=http://localhost:80
 | `GET`  | `/health`              | No            | Shallow app health                          |
 | `GET`  | `/v1/health`           | Yes           | Deep provider health (includes internal URLs) |
 | `GET`  | `/v1/models`           | Yes           | Proxy model list from active provider       |
-| `POST` | `/v1/chat/completions` | Yes           | Validated OpenAI-compatible chat completion |
+| `POST` | `/v1/chat/completions` | Yes           | Validated OpenAI-compatible-subset chat completion |
 
 Auth is enforced when `API_KEYS` is non-empty. When `API_KEYS` is empty, all endpoints are accessible without a key.
+
+> **Model routing note:** The `model` field in the request body is accepted but the gateway always routes to the configured deployment model (`VLLM_MODEL` for the primary provider, `FALLBACK_MODEL` for the CPU fallback). The service is a single-model deployment, not a multi-model router. To switch models, update the environment variable and restart the stack.
 
 ## Authentication and quota
 
@@ -116,7 +118,7 @@ X-API-Key: dev-balu-key
 Authorization: Bearer dev-balu-key
 ```
 
-Quota is intentionally simple and in-memory for a portfolio project. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
+Quota is intentionally simple and in-memory for a portfolio project. Known limitations: it is per-process only (not distributed across replicas), counters are stored per API-key subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
 
 ## Portfolio talking points
 

@@ -56,11 +56,13 @@ curl http://localhost/v1/health | jq
 
 Expected states:
 
-| State      | Meaning                                       |
-| ---------- | --------------------------------------------- |
-| `ok`       | vLLM is reachable and model endpoint responds |
-| `degraded` | vLLM is down, fallback provider is reachable  |
-| `down`     | no provider is reachable                      |
+| State      | Meaning                                                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------------- |
+| `ok`       | vLLM is reachable, `/models` responds, and the configured model ID appears in the list              |
+| `degraded` | vLLM is down or its configured model is missing; fallback provider is reachable with its model      |
+| `down`     | no provider is reachable, or neither configured model appears in the respective `/models` responses  |
+
+The `detail` field in the health response shows which model was expected and which were found when a check fails, e.g. `"configured model 'qwen3.5-0.8b' not found in provider (available: [])"`.
 
 ## Smoke test
 
@@ -316,7 +318,14 @@ The wrapper is now at `http://localhost:8080`. Nginx and provider containers are
 The test suite mocks all provider network calls to verify the wrapper's own logic in isolation — no running containers or providers are needed:
 
 ```bash
-pytest -q
+pytest -q --cov=app --cov-report=term-missing
+```
+
+Run the linter and type checker before committing:
+
+```bash
+ruff check .
+mypy app/
 ```
 
 `pytest.ini` sets `asyncio_mode = auto` so async tests run without per-function decorators. Coverage includes:
@@ -324,6 +333,8 @@ pytest -q
 - **Schema validation** — Pydantic catches invalid request shapes
 - **Gateway fallback logic** — primary success, primary failure → Ollama fallback, both providers down
 - **HTTP layer** — stream rejection, response headers, error code mapping
+
+CI runs all three checks (`ruff`, `mypy`, `pytest --cov`) plus a Docker build on every push to `main` and `dev`, and on all pull requests.
 
 These unit tests are fast and reliable. For **integration testing** (verifying the full stack end-to-end against real providers), use the smoke test scripts documented in the sections above:
 
@@ -340,7 +351,7 @@ On Windows, run these commands in Git Bash:
 bash scripts/download_model.sh
 ```
 
-If `python` is not found, install Python 3.10+ and enable **Add python.exe to PATH**, then reopen Git Bash.
+If `python` is not found, install Python 3.12 and enable **Add python.exe to PATH**, then reopen Git Bash.
 
 ## Screenshot checklist
 

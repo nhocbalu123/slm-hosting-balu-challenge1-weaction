@@ -32,9 +32,11 @@ The gateway promotes Ollama automatically whenever:
 
 1. **vLLM unavailable at health check** — the primary `OpenAICompatibleClient.health()` probe
    (`GET /models`) fails or times out (`primary_timeout_seconds`, default 30 s).
-2. **vLLM returns a 5xx on the actual request** — the client raises `ProviderUnavailableError`,
+2. **Configured model not found in provider** — `GET /models` succeeds but `VLLM_MODEL` does not
+   appear in the returned list; the health check marks the provider `healthy: false`.
+3. **vLLM returns a 5xx on the actual request** — the client raises `ProviderUnavailableError`,
    which the gateway catches and re-routes.
-3. **GPU OOM at startup** — vLLM exits before accepting connections; the health probe fails immediately.
+4. **GPU OOM at startup** — vLLM exits before accepting connections; the health probe fails immediately.
 
 During the challenge demo the fallback was triggered by:
 - Temporarily stopping the vLLM container (`docker compose -f docker/docker-compose.yml stop vllm-qwen`).

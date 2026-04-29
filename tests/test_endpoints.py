@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.dependencies import get_llm_gateway, get_quota
+from app.api.dependencies import authenticated_subject, get_llm_gateway, get_quota
 from app.core.exceptions import ProviderUnavailableError
 from app.core.security import FixedWindowQuota
 from app.main import app
@@ -27,6 +27,7 @@ def mock_gateway() -> AsyncMock:
 def client(mock_gateway: AsyncMock) -> TestClient:
     app.dependency_overrides[get_llm_gateway] = lambda: mock_gateway
     app.dependency_overrides[get_quota] = lambda: FixedWindowQuota(requests_per_minute=1000)
+    app.dependency_overrides[authenticated_subject] = lambda: "test-subject"
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

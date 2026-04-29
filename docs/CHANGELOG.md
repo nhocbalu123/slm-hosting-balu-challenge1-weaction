@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2026-04-29
+
+### Added
+
+- **ruff, mypy, and coverage in CI**: the test job now runs `ruff check .`, `mypy app/`, and `pytest -q --cov=app --cov-report=term-missing`. `pytest-cov>=5.0.0`, `ruff>=0.4.0`, and `mypy>=1.10.0` added to `requirements.txt`.
+- **Docker build job in CI**: a separate `docker` job runs `docker build -f docker/Dockerfile .` on every CI run, catching Dockerfile regressions before they reach production.
+
+### Changed
+
+- **CI triggers on `dev` branch**: the workflow now runs on pushes to both `main` and `dev`, and on all pull requests. Previously only `main` push and PRs triggered CI.
+- **CI Python version aligned to 3.12**: matches `docker/Dockerfile` (`python:3.12-slim`) so CI tests the same interpreter that ships in the container. Previously CI used Python 3.11.
+- **`.env` file loaded automatically for local development**: `SettingsConfigDict` now sets `env_file=".env"` and `env_file_encoding="utf-8"`. Copying `.env.example` to `.env` and running `uvicorn app.main:app` locally is now sufficient — no manual shell variable export required. Docker Compose is unaffected because it injects environment variables at the container level, which take precedence over the file.
+- **Health check verifies the configured model name**: `OpenAICompatibleClient.health()` now checks that the expected model ID (`settings.vllm_model` for the primary, `settings.fallback_model` for the fallback) appears in the provider's `/models` list. A provider is marked `healthy: false` if the endpoint responds but the model is absent, and the `detail` field reports which model was expected and which were found.
+- **Provider responses protected against malformed JSON**: `chat_completions()` and `models()` now wrap `response.json()` in `try/except ValueError` and raise `ProviderUnavailableError`, so a provider returning a non-JSON 200 body produces a clean 503 instead of an unhandled 500.
+- **Endpoint tests now override auth dependency**: `tests/test_endpoints.py` overrides `authenticated_subject` in the test client fixture so endpoint tests remain independent of the local `.env` `API_KEYS` value.
+
+### Documentation
+
+- README: CI trigger description corrected from "on every push" to "on pushes to `main` and `dev`, and on pull requests"; `/v1/chat/completions` labelled as "OpenAI-compatible-subset"; model routing behaviour documented below the API table; quota limitations note expanded with per-process, unbounded-growth, and restart-reset caveats.
+
 ## [0.1.4] - 2026-04-29
 
 ### Added
