@@ -14,6 +14,12 @@ def test_no_user_message_rejected() -> None:
         ChatCompletionRequest(messages=[{"role": "system", "content": "Be helpful."}])
 
 
+@pytest.mark.parametrize("content", [None, "", "   ", []])
+def test_empty_user_content_rejected(content: object) -> None:
+    with pytest.raises(ValidationError):
+        ChatCompletionRequest(messages=[{"role": "user", "content": content}])
+
+
 def test_temperature_out_of_range() -> None:
     with pytest.raises(ValidationError):
         ChatCompletionRequest(

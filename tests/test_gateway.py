@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock
 
 from app.core.config import Settings
-from app.core.exceptions import ProviderUnavailableError
+from app.core.exceptions import ProviderRequestError, ProviderUnavailableError
 from app.domains.vllm_service import LLMGateway
 
 
@@ -64,6 +64,15 @@ async def test_primary_failure_triggers_fallback(gateway: LLMGateway) -> None:
 
     assert result == FAKE_RESPONSE
     assert provider == "ollama"
+
+
+async def test_primary_request_error_does_not_trigger_fallback(gateway: LLMGateway) -> None:
+    gateway.primary.chat_completions.side_effect = ProviderRequestError("bad request", provider_status_code=400)
+
+    with pytest.raises(ProviderRequestError):
+        await gateway.chat_completions(PAYLOAD, request_id="r1", subject="s1")
+
+    gateway.fallback.chat_completions.assert_not_called()
 
 
 async def test_both_providers_down(gateway: LLMGateway) -> None:

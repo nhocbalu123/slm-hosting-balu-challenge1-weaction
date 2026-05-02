@@ -3,7 +3,7 @@ from typing import Any
 
 import httpx
 
-from app.core.exceptions import ProviderTimeoutError, ProviderUnavailableError
+from app.core.exceptions import ProviderRequestError, ProviderTimeoutError, ProviderUnavailableError
 
 
 class OpenAICompatibleClient:
@@ -16,6 +16,7 @@ class OpenAICompatibleClient:
         api_key: str,
         timeout_seconds: float,
         expected_model: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.name = name
         self.base_url = base_url.rstrip("/")
@@ -26,6 +27,7 @@ class OpenAICompatibleClient:
             base_url=self.base_url,
             timeout=httpx.Timeout(timeout_seconds),
             headers={"Authorization": f"Bearer {api_key}"},
+            transport=transport,
         )
 
     async def close(self) -> None:
@@ -42,7 +44,10 @@ class OpenAICompatibleClient:
         if response.status_code >= 500:
             raise ProviderUnavailableError(f"{self.name} server error: {response.status_code} {response.text[:300]}")
         if response.status_code >= 400:
-            raise ProviderUnavailableError(f"{self.name} rejected request: {response.status_code} {response.text[:300]}")
+            raise ProviderRequestError(
+                f"{self.name} rejected request: {response.status_code} {response.text[:300]}",
+                provider_status_code=response.status_code,
+            )
         try:
             return response.json()
         except ValueError as exc:

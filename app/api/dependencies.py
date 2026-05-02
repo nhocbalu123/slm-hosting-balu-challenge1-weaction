@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, Header, Request
 
 from app.core.config import Settings, get_settings
-from app.core.security import FixedWindowQuota, require_api_key
+from app.core.security import FixedWindowQuota, authenticate_api_key, require_api_key
 from app.domains.vllm_service import LLMGateway
 
 
@@ -36,4 +36,19 @@ async def authenticated_subject(
     )
 
 
+async def auth_only_subject(
+    request: Request,
+    settings: SettingsDep,
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> str:
+    return await authenticate_api_key(
+        request=request,
+        settings=settings,
+        authorization=authorization,
+        x_api_key=x_api_key,
+    )
+
+
 AuthSubjectDep = Annotated[str, Depends(authenticated_subject)]
+AuthOnlySubjectDep = Annotated[str, Depends(auth_only_subject)]

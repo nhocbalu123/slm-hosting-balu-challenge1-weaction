@@ -4,7 +4,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import authenticated_subject, get_llm_gateway, get_quota
-from app.core.exceptions import ProviderUnavailableError
+from app.core.config import Settings, get_settings
+from app.core.exceptions import ProviderRequestError, ProviderUnavailableError
 from app.core.security import FixedWindowQuota
 from app.main import app
 
@@ -16,6 +17,19 @@ FAKE_RESPONSE = {
 }
 
 VALID_PAYLOAD = {"messages": [{"role": "user", "content": "hi"}]}
+HEALTH_RESPONSE = {
+    "status": "ok",
+    "active_provider": "vllm",
+    "model_loaded": True,
+    "primary": {
+        "name": "vllm",
+        "healthy": True,
+        "base_url": "http://vllm:8000/v1",
+        "latency_ms": 1.0,
+        "detail": "models ok; count=1",
+    },
+    "fallback": None,
+}
 
 
 @pytest.fixture()
@@ -55,3 +69,30 @@ def test_both_down_returns_503(client: TestClient, mock_gateway: AsyncMock) -> N
     resp = client.post("/v1/chat/completions", json=VALID_PAYLOAD)
 
     assert resp.status_code == 503
+
+
+def test_provider_request_error_returns_400(client: TestClient, mock_gateway: AsyncMock) -> None:
+    mock_gateway.chat_completions.side_effect = ProviderRequestError("context length exceeded", provider_status_code=400)
+
+    resp = client.post("/v1/chat/completions", json=VALID_PAYLOAD)
+
+    assert resp.status_code == 400
+    assert "rejected request" in resp.json()["detail"]
+
+
+def test_deep_health_does_not_consume_chat_quota(mock_gateway: AsyncMock) -> None:
+    quota = FixedWindowQuota(requests_per_minute=1)
+    mock_gateway.health.return_value = HEALTH_RESPONSE
+    app.dependency_overrides[get_llm_gateway] = lambda: mock_gateway
+    app.dependency_overrides[get_quota] = lambda: quota
+    app.dependency_overrides[get_settings] = lambda: Settings(api_keys="test-key")
+
+    with TestClient(app) as c:
+        first = c.get("/v1/health", headers={"X-API-Key": "test-key"})
+        second = c.get("/v1/health", headers={"X-API-Key": "test-key"})
+
+    app.dependency_overrides.clear()
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert quota._buckets == {}
