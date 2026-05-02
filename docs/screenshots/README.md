@@ -174,6 +174,7 @@ Capture log lines that are valid JSON and include fields such as:
 - `"status_code"`
 - `"latency_ms"`
 - `"message": "chat completion succeeded"` with `"provider"`
+- `"subject": "api_key:..."` for authenticated requests, without exposing the raw API key
 
 If the terminal output is too noisy, run a fresh chat request and then run the logs command again with a smaller tail, for example `--tail=30`.
 

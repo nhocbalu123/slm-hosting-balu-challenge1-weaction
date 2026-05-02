@@ -1,6 +1,10 @@
 # slm-hosting-balu-challenge1-weaction
 
+[![CI](https://github.com/nhocbalu123/slm-hosting-balu-challenge1-weaction/actions/workflows/ci.yml/badge.svg)](https://github.com/nhocbalu123/slm-hosting-balu-challenge1-weaction/actions/workflows/ci.yml)
+
 Production-style self-hosted SLM project for the WeAction Challenge 1 assignment.
+
+This is an AI serving/MLOps project, not a model-training project.
 
 This repository hosts a small Qwen 3.5 model behind a FastAPI wrapper, with Docker Compose, Nginx reverse proxy, basic API-key auth, request quota controls, structured JSON logs, deep health checks, and an Ollama CPU fallback path.
 
@@ -48,7 +52,7 @@ For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to
 - Nginx reverse proxy with rate limiting
 - Optional API-key authentication (`/v1/health`, `/v1/models`, and `/v1/chat/completions`)
 - Lightweight in-memory per-key quota
-- JSON logs with latency, provider, status, and request IDs
+- JSON logs with latency, provider, status, request IDs, and redacted API-key subjects
 - Deep health checks for primary and fallback providers
 - Docker Compose files for GPU and CPU-only demo modes
 - GitHub Actions CI running the full test suite on pushes to `main` and `dev`, and on pull requests
@@ -67,7 +71,9 @@ slm-hosting-balu-challenge1-weaction/
 ├── tests/                       # unit and HTTP-layer tests
 ├── docs/AVOIDANCE_TABLE.md      # proof of avoided production mistakes
 ├── pytest.ini                   # asyncio_mode = auto for pytest-asyncio
-├── requirements.txt
+├── requirements.txt             # runtime dependencies
+├── requirements-dev.txt         # test, lint, type-check dependencies
+├── LICENSE
 ├── .env.example
 └── README.md
 ```
@@ -118,11 +124,11 @@ X-API-Key: dev-balu-key
 Authorization: Bearer dev-balu-key
 ```
 
-Quota is intentionally simple and in-memory for a portfolio project. Known limitations: it is per-process only (not distributed across replicas), counters are stored per API-key subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
+Quota is intentionally simple and in-memory for a portfolio project. Authenticated requests are tracked by a stable redacted subject such as `api_key:<hash-prefix>`, so raw API keys are not written to application logs. Known limitations: quota is per-process only (not distributed across replicas), counters are stored per subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
 
-## Limitations / next steps
+## What I Would Improve Next
 
-This repository focuses on the core serving pattern rather than a full production platform. The next steps for a real deployment would be Redis-backed distributed quota, TLS certificate management, metrics, distributed tracing, Kubernetes deployment/autoscaling, and streaming response support.
+This repository focuses on the core serving pattern rather than a full production platform. Next improvements would be Redis-backed distributed quota, streaming responses, metrics, distributed tracing, TLS certificate management, Kubernetes deployment/autoscaling, and serving a larger model when GPU capacity allows.
 
 ## Portfolio talking points
 
@@ -151,4 +157,8 @@ Key choices worth calling out:
 The 0.8B model is fast enough for interactive demos, but quality drops on multi-step reasoning, long-context tasks, and complex instruction following. The gateway is model-agnostic, so moving to a larger model is mostly an environment-variable change.
 
 See [`docs/EVALUATION.md`](docs/EVALUATION.md) for sample prompts, measured latencies, and a detailed limitations table.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
 

@@ -1,3 +1,4 @@
+import hashlib
 import time
 from dataclasses import dataclass, field
 
@@ -40,6 +41,11 @@ def extract_api_key(authorization: str | None, x_api_key: str | None) -> str | N
     return None
 
 
+def subject_for_api_key(api_key: str) -> str:
+    digest = hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:12]
+    return f"api_key:{digest}"
+
+
 async def require_api_key(
     request: Request,
     settings: Settings,
@@ -49,12 +55,12 @@ async def require_api_key(
 ) -> str:
     key = extract_api_key(authorization, x_api_key)
     if settings.api_keys:
-        if key not in settings.api_keys:
+        if key is None or key not in settings.api_keys:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="missing or invalid API key",
             )
-        subject = key or "anonymous"
+        subject = subject_for_api_key(key)
     else:
         subject = request.client.host if request.client else "anonymous"
     quota.check(subject)

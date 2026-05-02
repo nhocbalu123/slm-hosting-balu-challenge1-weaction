@@ -3,6 +3,8 @@
 > **Status: evaluation results captured.**
 > All eight sample prompts have been tested against the primary vLLM path. Fallback, cold-start, warm-path, and CPU-only latency summaries have also been measured for the recommended prompt.
 
+This evaluation measures the serving stack and gateway behavior. It does not evaluate model training or fine-tuning.
+
 Stack under test (as described in [RUNBOOK.md](RUNBOOK.md)):
 
 - **Primary**: vLLM (GPU) serving `Qwen/Qwen3.5-0.8B`

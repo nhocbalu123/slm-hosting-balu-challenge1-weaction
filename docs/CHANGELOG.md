@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2026-05-02
+
+### Added
+
+- **MIT license**: added `LICENSE` so the portfolio project has clear reuse terms.
+- **README CI badge and portfolio positioning**: added the GitHub Actions badge, explicit AI serving/MLOps positioning, and a concise "What I Would Improve Next" section.
+
+### Changed
+
+- **Runtime and development dependencies split**: `requirements.txt` now contains only runtime dependencies, while `requirements-dev.txt` installs test, lint, type-check, and coverage tools for local development and CI.
+- **CI dependency install path**: GitHub Actions now installs `requirements-dev.txt`; the Docker runtime image continues to install only `requirements.txt`.
+
+### Security
+
+- **Raw API keys removed from log subjects**: authenticated requests now use a stable redacted subject such as `api_key:<hash-prefix>` for quota and structured logs instead of logging the raw API key.
+
+### Fixed
+
+- **CI mypy failure**: narrowed the optional fallback provider before using fallback fields in gateway health and chat paths.
+
 ## [0.1.5] - 2026-04-29
 
 ### Added

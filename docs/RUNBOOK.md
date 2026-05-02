@@ -105,7 +105,7 @@ Important fields:
 - `status_code`
 - `latency_ms`
 - `provider`
-- `subject`
+- `subject` (`api_key:<hash-prefix>` for authenticated requests; raw API keys are not logged)
 
 ## Fallback test
 
@@ -323,12 +323,14 @@ The wrapper is now at `http://localhost:8080`. Nginx and provider containers are
 The test suite mocks all provider network calls to verify the wrapper's own logic in isolation — no running containers or providers are needed:
 
 ```bash
+pip install -r requirements-dev.txt
 pytest -q --cov=app --cov-report=term-missing
 ```
 
 Run the linter and type checker before committing:
 
 ```bash
+pip install -r requirements-dev.txt
 ruff check .
 mypy app/
 ```
@@ -339,7 +341,7 @@ mypy app/
 - **Gateway fallback logic** — primary success, primary failure → Ollama fallback, both providers down
 - **HTTP layer** — stream rejection, response headers, error code mapping
 
-CI runs all three checks (`ruff`, `mypy`, `pytest --cov`) plus a Docker build on every push to `main` and `dev`, and on all pull requests.
+CI installs `requirements-dev.txt`, runs all three checks (`ruff`, `mypy`, `pytest --cov`), and builds the Docker image on every push to `main` and `dev`, and on all pull requests. The Docker runtime image installs only `requirements.txt`.
 
 These unit tests are fast and reliable. For **integration testing** (verifying the full stack end-to-end against real providers), use the smoke test scripts documented in the sections above:
 

@@ -71,28 +71,29 @@ class LLMGateway:
             if not self.fallback:
                 raise
 
+        fallback = self.fallback
         fallback_start = time.perf_counter()
         fallback_payload = {**payload, "model": self.settings.fallback_model}
         try:
-            result = await self.fallback.chat_completions(fallback_payload)
+            result = await fallback.chat_completions(fallback_payload)
             latency_ms = round((time.perf_counter() - fallback_start) * 1000, 2)
             logger.info(
                 "chat completion succeeded via fallback",
                 extra={
                     "request_id": request_id,
                     "subject": subject,
-                    "provider": self.fallback.name,
+                    "provider": fallback.name,
                     "latency_ms": latency_ms,
                 },
             )
-            return result, self.fallback.name
+            return result, fallback.name
         except ProviderError:
             logger.exception(
                 "fallback provider failed",
                 extra={
                     "request_id": request_id,
                     "subject": subject,
-                    "provider": self.fallback.name,
+                    "provider": fallback.name,
                 },
             )
             raise
@@ -109,15 +110,17 @@ class LLMGateway:
 
     async def health(self) -> dict[str, Any]:
         primary = await self.primary.health()
-        fallback = await self.fallback.health() if self.fallback else None
+        fallback_provider = self.fallback
+        fallback = await fallback_provider.health() if fallback_provider else None
 
         if primary["healthy"]:
             status = "ok"
             active_provider = self.primary.name
             model_loaded = True
         elif fallback and fallback["healthy"]:
+            assert fallback_provider is not None
             status = "degraded"
-            active_provider = self.fallback.name
+            active_provider = fallback_provider.name
             model_loaded = True
         else:
             status = "down"

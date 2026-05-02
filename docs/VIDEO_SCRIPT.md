@@ -2,7 +2,7 @@
 
 ## 0:00-0:30 — Introduction
 
-Hi, I am BALU. This project is `slm-hosting-balu-challenge1-weaction`. It demonstrates how to self-host a small Qwen 3.5 model behind a production-style API stack.
+Hi, I am BALU. This project is `slm-hosting-balu-challenge1-weaction`. It demonstrates how to self-host a small Qwen 3.5 model behind a production-style API stack. It is an AI serving and MLOps project, not a model-training project.
 
 ## 0:30-1:20 — Architecture
 
@@ -11,7 +11,7 @@ Show the diagram in the README.
 Explain:
 
 - Nginx is the public entrypoint and rate limiter.
-- FastAPI is the wrapper for validation, API keys, quota, logs, health checks, timeout, and fallback.
+- FastAPI is the wrapper for validation, API keys, redacted quota subjects, logs, health checks, timeout, and fallback.
 - vLLM serves the model on GPU.
 - Ollama is the CPU fallback path.
 
@@ -71,4 +71,4 @@ Show:
 - `docs/AVOIDANCE_TABLE.md`
 - `docs/RUNBOOK.md`
 
-Close by explaining that a real production version would use Redis quota, TLS certificates, metrics, tracing, Kubernetes autoscaling, and streaming response support.
+Close by explaining that a real production version would use Redis quota, streaming responses, metrics, tracing, TLS certificates, Kubernetes autoscaling, and a larger model.
