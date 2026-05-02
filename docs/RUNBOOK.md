@@ -135,13 +135,16 @@ docker compose -f docker/docker-compose.yml stop vllm-qwen
 curl -H 'X-API-Key: dev-balu-key' http://localhost/v1/health | jq
 ```
 
-5. Call chat completion and check response header:
+5. Call chat completion and check the response header. This keeps the body readable and normalizes the provider header as `X-LLM-Provider` for display:
 
 ```bash
-curl -i http://localhost/v1/chat/completions \
+curl -sS -D /tmp/fallback-headers.txt -o /tmp/fallback-body.json \
+  http://localhost/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -H 'X-API-Key: dev-balu-key' \
-  -d '{"messages":[{"role":"user","content":"Say fallback ok"}],"max_tokens":32}'
+  -d '{"messages":[{"role":"user","content":"Reply with exactly: fallback OK"}],"max_tokens":16,"temperature":0}' && \
+sed -n '1p;s/^x-llm-provider:[[:space:]]*/X-LLM-Provider: /Ip;s/^x-request-id:[[:space:]]*/x-request-id: /Ip' /tmp/fallback-headers.txt && \
+jq . /tmp/fallback-body.json
 ```
 
 Expected header:
@@ -149,6 +152,8 @@ Expected header:
 ```text
 X-LLM-Provider: ollama
 ```
+
+If `jq` is not installed, replace the last line with `python -m json.tool /tmp/fallback-body.json`.
 
 ## Rate-limit proof
 

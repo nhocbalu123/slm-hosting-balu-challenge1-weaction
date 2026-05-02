@@ -24,12 +24,14 @@ class Settings(BaseSettings):
     vllm_base_url: str = "http://vllm-qwen:8000/v1"
     vllm_api_key: str = "EMPTY"
     vllm_model: str = "qwen3.5-0.8b"
+    primary_provider_name: str = "vllm"
     primary_timeout_seconds: float = Field(default=30.0, ge=1.0)
 
     enable_fallback: bool = True
     fallback_base_url: str = "http://ollama:11434/v1"
     fallback_api_key: str = "ollama"
     fallback_model: str = "qwen3.5:0.8b"
+    fallback_provider_name: str = "ollama"
     fallback_timeout_seconds: float = Field(default=60.0, ge=1.0)
 
     @field_validator("api_keys", mode="before")

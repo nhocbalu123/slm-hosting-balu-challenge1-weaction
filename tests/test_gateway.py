@@ -31,6 +31,21 @@ def gateway() -> LLMGateway:
     return gw
 
 
+async def test_gateway_uses_configured_provider_names() -> None:
+    settings = Settings(
+        primary_provider_name="ollama",
+        fallback_provider_name="backup",
+        enable_fallback=True,
+        api_keys="",
+    )
+    gateway = LLMGateway(settings)
+
+    assert gateway.primary.name == "ollama"
+    assert gateway.fallback is not None
+    assert gateway.fallback.name == "backup"
+    await gateway.close()
+
+
 async def test_primary_success(gateway: LLMGateway) -> None:
     gateway.primary.chat_completions.return_value = FAKE_RESPONSE
 

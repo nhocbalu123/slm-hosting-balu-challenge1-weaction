@@ -28,6 +28,7 @@ services:
             VLLM_BASE_URL: http://ollama:11434/v1
             VLLM_API_KEY: ollama
             VLLM_MODEL: qwen3.5:0.8b
+            PRIMARY_PROVIDER_NAME: ollama
             ENABLE_FALLBACK: "false"
             PRIMARY_TIMEOUT_SECONDS: 90
         depends_on:

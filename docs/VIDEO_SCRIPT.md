@@ -58,7 +58,7 @@ Show:
 
 - health check
 - chat completion response
-- `X-LLM-Provider` header if using `curl -i`
+- `X-LLM-Provider` header from the smoke test or the clean header/body command in `docs/screenshots/README.md`
 - note: if `jq` is missing, the script prints raw JSON or run it inside the API container
 
 ## 4:20-5:00 — Production-readiness proof

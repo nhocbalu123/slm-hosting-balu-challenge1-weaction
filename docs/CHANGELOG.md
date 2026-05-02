@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 ### Documentation
 
 - README: CI trigger description corrected from "on every push" to "on pushes to `main` and `dev`, and on pull requests"; `/v1/chat/completions` labelled as "OpenAI-compatible-subset"; model routing behaviour documented below the API table; quota limitations note expanded with per-process, unbounded-growth, and restart-reset caveats.
+- Screenshot guide and runbook: replaced inline header/body chat examples with separated output and short deterministic prompts so provider headers remain visible while JSON responses stay readable in screenshots.
 
 ## [0.1.4] - 2026-04-29
 

@@ -15,7 +15,7 @@ class LLMGateway:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.primary = OpenAICompatibleClient(
-            name="vllm",
+            name=settings.primary_provider_name,
             base_url=settings.vllm_base_url,
             api_key=settings.vllm_api_key,
             timeout_seconds=settings.primary_timeout_seconds,
@@ -23,7 +23,7 @@ class LLMGateway:
         )
         self.fallback = (
             OpenAICompatibleClient(
-                name="ollama",
+                name=settings.fallback_provider_name,
                 base_url=settings.fallback_base_url,
                 api_key=settings.fallback_api_key,
                 timeout_seconds=settings.fallback_timeout_seconds,
