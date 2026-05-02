@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - **CI mypy failure**: narrowed the optional fallback provider before using fallback fields in gateway health and chat paths.
+- **Linux pytest import path**: `pytest.ini` now adds the repository root to `pythonpath` so CI can import the local `app` package during test collection.
 
 ## [0.1.5] - 2026-04-29
 
