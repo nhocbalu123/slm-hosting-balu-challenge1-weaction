@@ -61,6 +61,22 @@ async def require_api_key(
     authorization: str | None = None,
     x_api_key: str | None = None,
 ) -> str:
+    subject = await authenticate_api_key(
+        request=request,
+        settings=settings,
+        authorization=authorization,
+        x_api_key=x_api_key,
+    )
+    quota.check(subject)
+    return subject
+
+
+async def authenticate_api_key(
+    request: Request,
+    settings: Settings,
+    authorization: str | None = None,
+    x_api_key: str | None = None,
+) -> str:
     key = extract_api_key(authorization, x_api_key)
     if settings.api_keys:
         if key is None or not api_key_matches(key, settings.api_keys):
@@ -71,5 +87,4 @@ async def require_api_key(
         subject = subject_for_api_key(key)
     else:
         subject = request.client.host if request.client else "anonymous"
-    quota.check(subject)
     return subject

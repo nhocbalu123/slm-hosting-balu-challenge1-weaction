@@ -70,7 +70,7 @@ The `detail` field in the health response shows which model was expected and whi
 bash scripts/smoke_test.sh
 ```
 
-If `jq` is not installed, the script prints raw JSON with a warning.
+The script exits non-zero if any request fails, if an endpoint returns an unexpected HTTP status, if shallow health is not `ok`, if deep health is not `ok` or `degraded`, or if chat completion does not return HTTP 200. If `jq` is not installed, the script uses Python for JSON formatting and status checks.
 
 Run inside the API container (uses bundled `jq`):
 
@@ -106,6 +106,17 @@ Important fields:
 - `latency_ms`
 - `provider`
 - `subject` (`api_key:<hash-prefix>` for authenticated requests; raw API keys are not logged)
+
+## Timeout budgets
+
+Provider client timeouts are configured independently for the primary and fallback providers:
+
+```env
+PRIMARY_TIMEOUT_SECONDS=30
+FALLBACK_TIMEOUT_SECONDS=60
+```
+
+The Nginx chat proxy uses a `120s` send/read timeout so the API can spend the full primary-plus-fallback budget and still return the fallback result instead of being cut off at the edge. Deep health uses a `120s` read timeout, and `/v1/models` uses `180s` because it may check provider health before proxying the active provider's model list.
 
 ## Fallback test
 
@@ -248,7 +259,7 @@ API_KEYS=
 
 ### API returns 429
 
-The in-memory app quota or Nginx rate limiter is working. Lower traffic or increase `REQUESTS_PER_MINUTE` and the Nginx `limit_req_zone` rate.
+The in-memory app quota or Nginx rate limiter is working. App quota is applied to chat completions, while authenticated `/v1/health` and `/v1/models` calls do not consume chat quota. Lower traffic or increase `REQUESTS_PER_MINUTE` and the Nginx `limit_req_zone` rate.
 
 ### API container exits or fails health checks with SettingsError
 
@@ -295,7 +306,7 @@ docker compose -f docker/docker-compose.yml up -d
 2. vLLM is not exposed directly to the internet; Nginx is the edge.
 3. The wrapper validates request shape before calling the model.
 4. API keys are checked by the wrapper.
-5. Quota/rate limiting exists in both FastAPI and Nginx layers.
+5. Chat-completion quota/rate limiting exists in both FastAPI and Nginx layers.
 6. Logs are structured JSON and include latency/request metadata.
 7. Health checks verify downstream provider readiness, not only process uptime.
 8. Timeout and fallback prevent the API from hanging forever when vLLM is slow or down.
@@ -337,7 +348,7 @@ mypy app/
 
 `pytest.ini` sets `asyncio_mode = auto` so async tests run without per-function decorators. Coverage includes:
 
-- **Schema validation** — Pydantic catches invalid request shapes
+- **Schema validation** — Pydantic catches invalid request shapes, including empty user messages
 - **Provider HTTP boundary** — 4xx request rejections, 5xx outages, timeouts, connection errors, malformed JSON, `/models` failures, and model-mismatch health
 - **Gateway fallback logic** — primary success, primary outage → Ollama fallback, request rejection without fallback, both providers down
 - **HTTP layer** — stream rejection, response headers, error code mapping

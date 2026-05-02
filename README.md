@@ -68,7 +68,7 @@ For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to
 - Ollama CPU fallback provider
 - Nginx reverse proxy with rate limiting
 - Optional API-key authentication with constant-time key comparison (`/v1/health`, `/v1/models`, and `/v1/chat/completions`)
-- Lightweight in-memory per-key quota
+- Lightweight in-memory per-key quota for chat completions
 - JSON logs with latency, provider, status, request IDs, and redacted API-key subjects
 - Deep health checks for primary and fallback providers
 - Docker Compose files for GPU and CPU-only demo modes
@@ -111,7 +111,7 @@ Quick smoke test:
 bash scripts/smoke_test.sh
 ```
 
-If `jq` is missing, the script prints raw JSON. You can also run it inside the API container:
+The smoke test now fails loudly on unexpected HTTP responses, requires shallow health to be `ok`, requires deep health to be `ok` or `degraded`, and requires chat completion to return HTTP 200. If `jq` is missing, the script uses Python for JSON formatting and status checks. You can also run it inside the API container:
 
 ```bash
 docker compose -f docker/docker-compose.yml exec -e BASE_URL=http://localhost:8080 api bash /app/scripts/smoke_test.sh
@@ -141,7 +141,7 @@ X-API-Key: dev-balu-key
 Authorization: Bearer dev-balu-key
 ```
 
-Quota is intentionally simple and in-memory for a portfolio project. Authenticated requests are tracked by a stable redacted subject such as `api_key:<hash-prefix>`, so raw API keys are not written to application logs. Known limitations: quota is per-process only (not distributed across replicas), counters are stored per subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
+Quota is intentionally simple and in-memory for a portfolio project. Chat completion requests are tracked by a stable redacted subject such as `api_key:<hash-prefix>`, so raw API keys are not written to application logs. Authenticated health and model-list endpoints do not consume chat quota. Known limitations: quota is per-process only (not distributed across replicas), counters are stored per subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
 
 ## Current limitations and next improvements
 
@@ -166,9 +166,11 @@ Key choices worth calling out:
 
 - `asyncio_mode = auto` keeps async tests running without per-test decorators.
 - `/v1/health` requires auth because it exposes provider details; root `/health` stays public and shallow.
+- Health and model-list endpoints authenticate callers but do not consume chat-completion quota.
 - Tests override FastAPI dependencies instead of patching app state directly.
 - vLLM and Ollama are modelled as primary/fallback providers, not load-balanced peers.
 - Provider outages can trigger fallback, but provider request rejections return a client error instead of silently retrying against another backend.
+- Nginx chat timeout is longer than the app's primary-plus-fallback provider budget, so a slow primary timeout still leaves room for the fallback response.
 - Provider HTTP boundary tests cover 4xx, 5xx, timeout, connection, malformed JSON, and model-mismatch health behavior.
 
 ### 0.8B SLM quality vs. latency trade-off

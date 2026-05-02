@@ -1,6 +1,6 @@
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.api.v1.schemas.base import APIModel
 
@@ -10,6 +10,18 @@ class ChatMessage(APIModel):
     content: str | list[dict[str, Any]] | None = None
     name: str | None = None
     tool_call_id: str | None = None
+
+    @model_validator(mode="after")
+    def require_user_content(self) -> Self:
+        if self.role != "user":
+            return self
+        if self.content is None:
+            raise ValueError("user message content is required")
+        if isinstance(self.content, str) and not self.content.strip():
+            raise ValueError("user message content must not be empty")
+        if isinstance(self.content, list) and not self.content:
+            raise ValueError("user message content must not be empty")
+        return self
 
 
 class ChatCompletionRequest(APIModel):

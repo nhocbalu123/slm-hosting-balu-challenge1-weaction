@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7] - 2026-05-02
+
+### Changed
+
+- **Nginx timeout budget aligned with fallback behavior**: chat proxy send/read timeouts now allow the API to spend the full primary-plus-fallback provider timeout budget and still return a fallback response. Deep health and model-list read timeouts were also extended for provider checks.
+- **Health/model auth separated from chat quota**: `/v1/health` and `/v1/models` still require API-key auth when enabled, but they no longer consume the in-memory chat-completion quota.
+- **Smoke test exits on failed evidence**: `scripts/smoke_test.sh` now checks HTTP status codes, validates shallow/deep health states, and requires chat completion to return HTTP 200.
+- **Chat schema rejects empty user messages**: user messages must contain non-empty string content or a non-empty content-part list before the wrapper forwards the request to a provider.
+
+### Documentation
+
+- README, runbook, and avoidance table now document the auth-versus-quota split, stricter validation, smoke-test failure behavior, and timeout budget.
+
 ## [0.1.6] - 2026-05-02
 
 ### Added
