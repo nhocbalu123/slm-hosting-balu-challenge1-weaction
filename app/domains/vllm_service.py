@@ -3,7 +3,7 @@ import time
 from typing import Any
 
 from app.core.config import Settings
-from app.core.exceptions import ProviderError
+from app.core.exceptions import ProviderError, ProviderRequestError
 from app.services.openai_client import OpenAICompatibleClient
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,16 @@ class LLMGateway:
                 },
             )
             return result, self.primary.name
+        except ProviderRequestError:
+            logger.warning(
+                "primary provider rejected request",
+                extra={
+                    "request_id": request_id,
+                    "subject": subject,
+                    "provider": self.primary.name,
+                },
+            )
+            raise
         except ProviderError as primary_error:
             logger.warning(
                 "primary provider failed",

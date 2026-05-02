@@ -7,16 +7,19 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - **MIT license**: added `LICENSE` so the portfolio project has clear reuse terms.
-- **README CI badge and portfolio positioning**: added the GitHub Actions badge, explicit AI serving/MLOps positioning, and a concise "What I Would Improve Next" section.
+- **README CI badge and portfolio positioning**: added the GitHub Actions badge, explicit AI serving/MLOps positioning, a Mermaid architecture diagram, and a concise "Current limitations and next improvements" section.
+- **Provider HTTP boundary tests**: added mocked `httpx` tests for provider 4xx, 5xx, timeout, connection error, malformed JSON, `/models` failure, and model-mismatch health behavior.
 
 ### Changed
 
 - **Runtime and development dependencies split**: `requirements.txt` now contains only runtime dependencies, while `requirements-dev.txt` installs test, lint, type-check, and coverage tools for local development and CI.
 - **CI dependency install path**: GitHub Actions now installs `requirements-dev.txt`; the Docker runtime image continues to install only `requirements.txt`.
+- **Provider request rejection handling**: provider 4xx responses from chat completions now raise a request error, skip fallback, and return a wrapper 400 instead of being treated as provider outages.
 
 ### Security
 
 - **Raw API keys removed from log subjects**: authenticated requests now use a stable redacted subject such as `api_key:<hash-prefix>` for quota and structured logs instead of logging the raw API key.
+- **Constant-time API key comparison**: configured API keys are checked with `hmac.compare_digest` to avoid ordinary string-comparison timing criticism.
 
 ### Fixed
 

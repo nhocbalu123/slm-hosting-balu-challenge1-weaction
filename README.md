@@ -12,6 +12,23 @@ This repository hosts a small Qwen 3.5 model behind a FastAPI wrapper, with Dock
 
 AI engineers often need to deploy their own fine-tuned or open-source models instead of calling a hosted API. This repo demonstrates the core production pattern:
 
+```mermaid
+flowchart LR
+    client[Client]
+    nginx[Nginx reverse proxy<br/>edge rate limiting]
+    api[FastAPI wrapper<br/>validation, auth, quota<br/>logging, timeout, fallback]
+    vllm[vLLM<br/>primary OpenAI-compatible server]
+    ollama[Ollama<br/>CPU fallback server]
+    model[Qwen 3.5 SLM]
+
+    client -->|HTTPS / HTTP| nginx
+    nginx -->|rate-limited internal traffic| api
+    api -->|primary route| vllm
+    api -. fallback on provider failure .-> ollama
+    vllm --> model
+    ollama -.-> model
+```
+
 ```text
 Client
   ↓ HTTPS / HTTP
@@ -50,7 +67,7 @@ For a larger GPU, you can change `MODEL_ID` and `PUBLIC_MODEL_NAME` in `.env` to
 - vLLM primary provider
 - Ollama CPU fallback provider
 - Nginx reverse proxy with rate limiting
-- Optional API-key authentication (`/v1/health`, `/v1/models`, and `/v1/chat/completions`)
+- Optional API-key authentication with constant-time key comparison (`/v1/health`, `/v1/models`, and `/v1/chat/completions`)
 - Lightweight in-memory per-key quota
 - JSON logs with latency, provider, status, request IDs, and redacted API-key subjects
 - Deep health checks for primary and fallback providers
@@ -126,7 +143,7 @@ Authorization: Bearer dev-balu-key
 
 Quota is intentionally simple and in-memory for a portfolio project. Authenticated requests are tracked by a stable redacted subject such as `api_key:<hash-prefix>`, so raw API keys are not written to application logs. Known limitations: quota is per-process only (not distributed across replicas), counters are stored per subject with no TTL cleanup (unbounded memory growth with many unique subjects), and resets on process restart. For real production, replace it with Redis, API gateway quotas, or a managed identity layer.
 
-## What I Would Improve Next
+## Current limitations and next improvements
 
 This repository focuses on the core serving pattern rather than a full production platform. Next improvements would be Redis-backed distributed quota, streaming responses, metrics, distributed tracing, TLS certificate management, Kubernetes deployment/autoscaling, and serving a larger model when GPU capacity allows.
 
@@ -151,6 +168,8 @@ Key choices worth calling out:
 - `/v1/health` requires auth because it exposes provider details; root `/health` stays public and shallow.
 - Tests override FastAPI dependencies instead of patching app state directly.
 - vLLM and Ollama are modelled as primary/fallback providers, not load-balanced peers.
+- Provider outages can trigger fallback, but provider request rejections return a client error instead of silently retrying against another backend.
+- Provider HTTP boundary tests cover 4xx, 5xx, timeout, connection, malformed JSON, and model-mismatch health behavior.
 
 ### 0.8B SLM quality vs. latency trade-off
 

@@ -338,7 +338,8 @@ mypy app/
 `pytest.ini` sets `asyncio_mode = auto` so async tests run without per-function decorators. Coverage includes:
 
 - **Schema validation** — Pydantic catches invalid request shapes
-- **Gateway fallback logic** — primary success, primary failure → Ollama fallback, both providers down
+- **Provider HTTP boundary** — 4xx request rejections, 5xx outages, timeouts, connection errors, malformed JSON, `/models` failures, and model-mismatch health
+- **Gateway fallback logic** — primary success, primary outage → Ollama fallback, request rejection without fallback, both providers down
 - **HTTP layer** — stream rejection, response headers, error code mapping
 
 CI installs `requirements-dev.txt`, runs all three checks (`ruff`, `mypy`, `pytest --cov`), and builds the Docker image on every push to `main` and `dev`, and on all pull requests. The Docker runtime image installs only `requirements.txt`.

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from app.api.dependencies import AuthSubjectDep, GatewayDep
 from app.api.v1.schemas.chat import ChatCompletionRequest
-from app.core.exceptions import ProviderError
+from app.core.exceptions import ProviderError, ProviderRequestError
 
 router = APIRouter(tags=["chat"])
 
@@ -28,6 +28,11 @@ async def chat_completions(
         response.headers["X-LLM-Provider"] = provider
         response.headers["X-Request-ID"] = request_id
         return data
+    except ProviderRequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"model provider rejected request: {exc}",
+        ) from exc
     except ProviderError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

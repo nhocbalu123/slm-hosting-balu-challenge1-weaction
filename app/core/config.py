@@ -41,7 +41,7 @@ class Settings(BaseSettings):
         if value is None or value == "":
             return []
         if isinstance(value, list):
-            return value
+            return [str(item).strip() for item in value if str(item).strip()]
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return []

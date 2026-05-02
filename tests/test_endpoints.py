@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.dependencies import authenticated_subject, get_llm_gateway, get_quota
-from app.core.exceptions import ProviderUnavailableError
+from app.core.exceptions import ProviderRequestError, ProviderUnavailableError
 from app.core.security import FixedWindowQuota
 from app.main import app
 
@@ -55,3 +55,12 @@ def test_both_down_returns_503(client: TestClient, mock_gateway: AsyncMock) -> N
     resp = client.post("/v1/chat/completions", json=VALID_PAYLOAD)
 
     assert resp.status_code == 503
+
+
+def test_provider_request_error_returns_400(client: TestClient, mock_gateway: AsyncMock) -> None:
+    mock_gateway.chat_completions.side_effect = ProviderRequestError("context length exceeded", provider_status_code=400)
+
+    resp = client.post("/v1/chat/completions", json=VALID_PAYLOAD)
+
+    assert resp.status_code == 400
+    assert "rejected request" in resp.json()["detail"]
