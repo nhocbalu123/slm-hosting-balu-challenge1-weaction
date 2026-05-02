@@ -1,4 +1,4 @@
-# slm-hosting-balu-challenge1-weaction
+# Self-Hosted SLM Inference API — Production-Style FastAPI + vLLM Stack
 
 [![CI](https://github.com/nhocbalu123/slm-hosting-balu-challenge1-weaction/actions/workflows/ci.yml/badge.svg)](https://github.com/nhocbalu123/slm-hosting-balu-challenge1-weaction/actions/workflows/ci.yml)
 
